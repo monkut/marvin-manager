@@ -91,6 +91,8 @@ ignore = [
     "ANN002",
     "ANN003",
     "ANN201",
+    "ANN401",  # Allow Any type for generic interfaces
+    "PLR0911",  # Allow many return statements in validation functions
     "ARG002",
     "ARG003",
     "C401",  # rewrite as a set comprehension
