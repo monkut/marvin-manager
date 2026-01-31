@@ -1,0 +1,40 @@
+# Marvin Web Service - Django/Gunicorn
+# Copy to /etc/systemd/system/marvin-web.service
+#
+# Usage:
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable marvin-web
+#   sudo systemctl start marvin-web
+
+[Unit]
+Description=Marvin Web Server (Gunicorn)
+Documentation=https://github.com/monkut/marvin-manager
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=notify
+User=marvin
+Group=marvin
+WorkingDirectory=/opt/marvin/mrvn
+Environment="PATH=/opt/marvin/.venv/bin"
+EnvironmentFile=/opt/marvin/.env
+ExecStart=/opt/marvin/.venv/bin/gunicorn mrvn.wsgi:application \
+    --bind 127.0.0.1:8000 \
+    --workers 4 \
+    --threads 2 \
+    --worker-class gthread \
+    --worker-tmp-dir /dev/shm \
+    --access-logfile /var/log/marvin/access.log \
+    --error-logfile /var/log/marvin/error.log \
+    --capture-output \
+    --enable-stdio-inheritance
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

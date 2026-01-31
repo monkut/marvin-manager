@@ -1,0 +1,29 @@
+# Marvin Slack Bot Service
+# Copy to /etc/systemd/system/marvin-slack.service
+#
+# Usage:
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable marvin-slack
+#   sudo systemctl start marvin-slack
+
+[Unit]
+Description=Marvin Slack Bot Daemon
+Documentation=https://github.com/monkut/marvin-manager
+After=network.target postgresql.service marvin-web.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=marvin
+Group=marvin
+WorkingDirectory=/opt/marvin/mrvn
+Environment="PATH=/opt/marvin/.venv/bin"
+EnvironmentFile=/opt/marvin/.env
+ExecStart=/opt/marvin/.venv/bin/python manage.py run_slack
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

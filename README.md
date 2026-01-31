@@ -6,7 +6,7 @@ A Django-based AI assistant platform with multi-channel messaging support (Teleg
 
 ```bash
 # 1. Clone and install
-git clone https://github.com/kiconiaworks/marvin-manager.git
+git clone https://github.com/monkut/marvin-manager.git
 cd marvin-manager
 uv sync
 
@@ -67,7 +67,7 @@ uv python install 3.14
 
 ```bash
 # Clone the repository
-git clone https://github.com/kiconiaworks/marvin-manager.git
+git clone https://github.com/monkut/marvin-manager.git
 cd marvin-manager
 
 # Install dependencies
@@ -340,7 +340,7 @@ cd mrvn && uv run python manage.py migrate
 
 ```bash
 # Clone repository and run install script
-git clone https://github.com/kiconiaworks/marvin-manager.git
+git clone https://github.com/monkut/marvin-manager.git
 cd marvin-manager
 sudo bash deploy/install.sh
 ```
@@ -359,7 +359,7 @@ sudo chown -R marvin:marvin /opt/marvin /var/log/marvin
 
 ```bash
 # Clone to /opt/marvin
-sudo -u marvin git clone https://github.com/kiconiaworks/marvin-manager.git /opt/marvin
+sudo -u marvin git clone https://github.com/monkut/marvin-manager.git /opt/marvin
 
 # Install dependencies
 cd /opt/marvin
