@@ -1,5 +1,6 @@
 """Built-in tools for the agent system."""
 
+import contextlib
 import datetime
 import logging
 from typing import Any
@@ -196,16 +197,126 @@ class MemoryRetrieveTool(BaseTool):
         )
 
 
-def register_builtin_tools(registry: Any) -> None:
+class MemorySearchTool(BaseTool):
+    """Tool for searching conversation memory using vector + text hybrid search."""
+
+    name = "memory_search"
+    description = "Search through past conversation history and summaries to find relevant information."
+    parameters = [
+        ToolParameter(
+            name="query",
+            type="string",
+            description="The search query to find relevant memories.",
+            required=True,
+        ),
+        ToolParameter(
+            name="search_type",
+            type="string",
+            description="Type of search: 'hybrid' (combines vector and text), 'vector' (semantic), 'text' (keyword).",
+            required=False,
+            default="hybrid",
+            enum=["hybrid", "vector", "text"],
+        ),
+        ToolParameter(
+            name="max_results",
+            type="number",
+            description="Maximum number of results to return (1-10).",
+            required=False,
+            default=5,
+        ),
+    ]
+
+    def __init__(
+        self,
+        config: dict[str, Any] | None = None,
+        agent_id: int | None = None,
+        session_id: int | None = None,
+    ) -> None:
+        """Initialize with optional agent/session context.
+
+        Args:
+            config: Tool configuration.
+            agent_id: Optional agent ID to limit search scope.
+            session_id: Optional session ID to limit search scope.
+        """
+        super().__init__(config)
+        self.agent_id = agent_id
+        self.session_id = session_id
+
+    async def execute(
+        self,
+        query: str,
+        search_type: str = "hybrid",
+        max_results: int = 5,
+    ) -> ToolResult:
+        """Search conversation memory."""
+        from memory.models import Session  # noqa: PLC0415
+        from memory.search import MemorySearchConfig, MemorySearchService  # noqa: PLC0415
+
+        # Create search service with custom max_results
+        config = MemorySearchConfig(max_results=min(max(1, max_results), 10))
+        service = MemorySearchService(config)
+
+        # Get session if we have a session_id
+        session = None
+        if self.session_id:
+            with contextlib.suppress(Session.DoesNotExist):
+                session = Session.objects.get(id=self.session_id)
+
+        # Perform search
+        results = service.search(
+            query=query,
+            session=session,
+            agent_id=self.agent_id,
+            search_type=search_type,
+        )
+
+        if not results:
+            return ToolResult.success(
+                output="No relevant memories found.",
+                data={"query": query, "results": [], "count": 0},
+            )
+
+        # Format results
+        formatted = []
+        for result in results:
+            formatted.append(
+                {
+                    "content": result.content,
+                    "score": round(result.score, 3),
+                    "source": result.source,
+                    "metadata": result.metadata,
+                }
+            )
+
+        output_lines = [f"Found {len(results)} relevant memories:"]
+        for i, r in enumerate(formatted, 1):
+            output_lines.append(f"\n{i}. [{r['source']}] (score: {r['score']})")
+            output_lines.append(f"   {r['content'][:200]}...")
+
+        return ToolResult.success(
+            output="\n".join(output_lines),
+            data={"query": query, "results": formatted, "count": len(results)},
+        )
+
+
+def register_builtin_tools(
+    registry: Any,
+    agent_id: int | None = None,
+    session_id: int | None = None,
+) -> None:
     """Register all built-in tools with the given registry.
 
     Args:
         registry: The ToolRegistry instance.
+        agent_id: Optional agent ID for memory search context.
+        session_id: Optional session ID for memory search context.
     """
     tools = [
         DateTimeTool(),
         CalculatorTool(),
         WebSearchTool(),
+        MemorySearchTool(agent_id=agent_id, session_id=session_id),
     ]
 
     for tool in tools:

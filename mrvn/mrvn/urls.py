@@ -11,4 +11,5 @@ admin.site.site_title = settings.SITE_TITLE
 urlpatterns = [
     path("", include(("commons.urls", "commons"), namespace="commons")),
     path("admin/", admin.site.urls),
+    path("api/v1/", include(("agents.urls", "agents"), namespace="agents")),
 ]

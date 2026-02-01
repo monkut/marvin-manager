@@ -77,6 +77,10 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # Third-party
+    "psqlextra",
+    "rest_framework",
+    # Local apps
     "commons",
     "accounts",
     "agents",
@@ -84,6 +88,18 @@ INSTALLED_APPS = [
     "memory",
     "autoreply",
 ]
+
+# Django REST Framework settings
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 20,
+}
 
 AUTH_USER_MODEL = "accounts.CustomUser"
 
@@ -124,7 +140,7 @@ WSGI_APPLICATION = "mrvn.wsgi.application"
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
+        "ENGINE": "psqlextra.backend",  # Required for partitioning
         "NAME": os.getenv("DB_NAME", "mrvn"),
         "USER": os.getenv("DB_USER", "postgres"),
         "PASSWORD": os.getenv("DB_PASS", "mysecretpassword"),
@@ -132,6 +148,9 @@ DATABASES = {
         "PORT": os.getenv("DB_PORT", "5432"),
     }
 }
+
+# Partitioning manager for psqlextra
+PSQLEXTRA_PARTITIONING_MANAGER = "memory.partitioning.manager"
 
 
 # Password validation

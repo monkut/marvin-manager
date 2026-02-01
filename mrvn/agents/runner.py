@@ -29,6 +29,7 @@ class AgentRunner:
         *,
         registry: ToolRegistry | None = None,
         register_builtins: bool = True,
+        session_id: int | None = None,
     ) -> None:
         """Initialize the agent runner.
 
@@ -36,13 +37,15 @@ class AgentRunner:
             agent: Optional Agent model instance.
             registry: Optional custom tool registry.
             register_builtins: Whether to register built-in tools.
+            session_id: Optional session ID for memory search context.
         """
         self.agent = agent
         self.registry = registry or ToolRegistry()
         self._client = None
 
         if register_builtins:
-            register_builtin_tools(self.registry)
+            agent_id = agent.id if agent else None
+            register_builtin_tools(self.registry, agent_id=agent_id, session_id=session_id)
 
     async def get_client(self) -> Any:
         """Get or create the LLM client."""
