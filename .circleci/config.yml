@@ -45,8 +45,8 @@ jobs:
           BOTO3_SQS_SERVICE_ENDPOINT: http://localhost:4566
           BOTO3_SNS_SERVICE_ENDPOINT: http://localhost:4566
           BOTO3_LAMBDA_SERVICE_ENDPOINT: http://localhost:4566
-          USE_XML_TESTRUNNER: True
-      - image: postgres:17
+          USE_XML_TESTRUNNER: "True"
+      - image: pgvector/pgvector:pg17
         environment:
           POSTGRES_USER: postgres
           POSTGRES_DB: mrvn
@@ -58,7 +58,8 @@ jobs:
       - checkout
       - run: sudo chown -R circleci:circleci /usr/local/bin
       - restore_cache:
-          key: deps-v1-{{ .Branch }}-{{ checksum "uv.lock" }}- run:
+          key: deps-v1-{{ .Branch }}-{{ checksum "uv.lock" }}
+      - run:
           name: Upgrade uv
           command: |
             pip install uv -U
@@ -103,7 +104,8 @@ jobs:
 
     steps:
       - checkout
-      - run: sudo chown -R circleci:circleci /usr/local/bin- restore_cache:
+      - run: sudo chown -R circleci:circleci /usr/local/bin
+      - restore_cache:
           key: deps-v1-{{ .Branch }}-deploy-{{ checksum "uv.lock" }}
       - run:
           name: Upgrade pip & uv & install boto3
@@ -127,12 +129,11 @@ jobs:
 
       - run:
           name: build package
-          command: | 
+          command: |
             cd ~/app
             mkdir -p ~/artifacts
             uv build
             cp dist/* /home/circleci/artifacts/
-            
 
       - persist_to_workspace:
           name: persist to workspace
