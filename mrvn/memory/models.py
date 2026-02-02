@@ -202,11 +202,14 @@ class EmbeddingChunk(PostgresPartitionedModel):
     class Meta:
         indexes = [
             # HNSW index for fast approximate nearest neighbor search
+            # m=24: More connections per layer improves recall (default=16)
+            # ef_construction=128: Better graph quality during build (default=64)
+            # See: https://github.com/pgvector/pgvector#hnsw
             HnswIndex(
                 name="embedding_chunk_hnsw_idx",
                 fields=["embedding"],
-                m=16,
-                ef_construction=64,
+                m=24,
+                ef_construction=128,
                 opclasses=["vector_cosine_ops"],
             ),
             models.Index(fields=["agent", "source", "source_id"]),

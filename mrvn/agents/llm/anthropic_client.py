@@ -3,6 +3,8 @@
 import logging
 from typing import Any
 
+from django.conf import settings
+
 from agents.llm.base import (
     BaseLLMClient,
     LLMMessage,
@@ -11,10 +13,15 @@ from agents.llm.base import (
     StopReason,
     ToolCall,
 )
+from agents.llm.definitions import (
+    AnthropicBlockTypes,
+    AnthropicContentTypes,
+    AnthropicRequest,
+    AnthropicRoles,
+    AnthropicStopReasons,
+)
 
 logger = logging.getLogger(__name__)
-
-DEFAULT_MODEL = "claude-sonnet-4-20250514"
 
 
 class AnthropicClient(BaseLLMClient):
@@ -28,7 +35,7 @@ class AnthropicClient(BaseLLMClient):
         **kwargs: Any,
     ) -> None:
         """Initialize the Anthropic client."""
-        super().__init__(api_key, base_url, model or DEFAULT_MODEL, **kwargs)
+        super().__init__(api_key, base_url, model or settings.DEFAULT_ANTHROPIC_MODEL, **kwargs)
         self._client: Any = None
 
     def _get_client(self) -> Any:
@@ -61,10 +68,10 @@ class AnthropicClient(BaseLLMClient):
                 # Tool results use tool_result content block
                 result.append(
                     {
-                        "role": "user",
+                        "role": AnthropicRoles.USER.value,
                         "content": [
                             {
-                                "type": "tool_result",
+                                "type": AnthropicContentTypes.TOOL_RESULT.value,
                                 "tool_use_id": msg.tool_call_id,
                                 "content": msg.content,
                             }
@@ -75,17 +82,17 @@ class AnthropicClient(BaseLLMClient):
                 # Assistant message with tool calls
                 content: list[dict[str, Any]] = []
                 if msg.content:
-                    content.append({"type": "text", "text": msg.content})
+                    content.append({"type": AnthropicContentTypes.TEXT.value, "text": msg.content})
                 for tc in msg.tool_calls:
                     content.append(
                         {
-                            "type": "tool_use",
+                            "type": AnthropicContentTypes.TOOL_USE.value,
                             "id": tc.id,
                             "name": tc.name,
                             "input": tc.arguments,
                         }
                     )
-                result.append({"role": "assistant", "content": content})
+                result.append({"role": AnthropicRoles.ASSISTANT.value, "content": content})
             else:
                 result.append(
                     {
@@ -102,9 +109,9 @@ class AnthropicClient(BaseLLMClient):
         tool_calls = []
 
         for block in response.content:
-            if block.type == "text":
+            if block.type == AnthropicBlockTypes.TEXT.value:
                 content_parts.append(block.text)
-            elif block.type == "tool_use":
+            elif block.type == AnthropicBlockTypes.TOOL_USE.value:
                 tool_calls.append(
                     ToolCall(
                         id=block.id,
@@ -115,10 +122,10 @@ class AnthropicClient(BaseLLMClient):
 
         # Map stop reason
         stop_reason_map = {
-            "end_turn": StopReason.END_TURN,
-            "max_tokens": StopReason.MAX_TOKENS,
-            "tool_use": StopReason.TOOL_USE,
-            "stop_sequence": StopReason.STOP_SEQUENCE,
+            AnthropicStopReasons.END_TURN.value: StopReason.END_TURN,
+            AnthropicStopReasons.MAX_TOKENS.value: StopReason.MAX_TOKENS,
+            AnthropicStopReasons.TOOL_USE.value: StopReason.TOOL_USE,
+            AnthropicStopReasons.STOP_SEQUENCE.value: StopReason.STOP_SEQUENCE,
         }
         stop_reason = stop_reason_map.get(response.stop_reason, StopReason.END_TURN)
 
@@ -145,22 +152,19 @@ class AnthropicClient(BaseLLMClient):
         """Generate a response from Claude."""
         client = self._get_client()
 
-        # Build request
-        request_kwargs: dict[str, Any] = {
-            "model": self.model,
-            "messages": self._convert_messages(messages),
-            "max_tokens": max_tokens,
-            "temperature": temperature,
-        }
+        # Build request using pydantic model for validation
+        request = AnthropicRequest(
+            model=self.model or settings.DEFAULT_ANTHROPIC_MODEL,
+            messages=self._convert_messages(messages),  # type: ignore[arg-type]
+            max_tokens=max_tokens,
+            temperature=temperature,
+            system=system_prompt,
+            tools=tools,
+            stop_sequences=stop_sequences,
+        )
 
-        if system_prompt:
-            request_kwargs["system"] = system_prompt
-
-        if tools:
-            request_kwargs["tools"] = tools
-
-        if stop_sequences:
-            request_kwargs["stop_sequences"] = stop_sequences
+        # Convert to dict, excluding None values
+        request_kwargs = request.model_dump(exclude_none=True)
 
         try:
             response = await client.messages.create(**request_kwargs)

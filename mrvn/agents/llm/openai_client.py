@@ -10,6 +10,8 @@ import json
 import logging
 from typing import Any
 
+from django.conf import settings
+
 from agents.llm.base import (
     BaseLLMClient,
     LLMMessage,
@@ -20,8 +22,6 @@ from agents.llm.base import (
 )
 
 logger = logging.getLogger(__name__)
-
-DEFAULT_MODEL = "gpt-4o"
 
 
 class OpenAIClient(BaseLLMClient):
@@ -35,7 +35,7 @@ class OpenAIClient(BaseLLMClient):
         **kwargs: Any,
     ) -> None:
         """Initialize the OpenAI client."""
-        super().__init__(api_key, base_url, model or DEFAULT_MODEL, **kwargs)
+        super().__init__(api_key, base_url, model or settings.DEFAULT_OPENAI_MODEL, **kwargs)
         self._client: Any = None
 
     def _get_client(self) -> Any:

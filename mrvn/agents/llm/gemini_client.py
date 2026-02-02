@@ -3,6 +3,8 @@
 import logging
 from typing import Any
 
+from django.conf import settings
+
 from agents.llm.base import (
     BaseLLMClient,
     LLMMessage,
@@ -13,8 +15,6 @@ from agents.llm.base import (
 )
 
 logger = logging.getLogger(__name__)
-
-DEFAULT_MODEL = "gemini-2.0-flash"
 
 
 class GeminiClient(BaseLLMClient):
@@ -28,7 +28,7 @@ class GeminiClient(BaseLLMClient):
         **kwargs: Any,
     ) -> None:
         """Initialize the Gemini client."""
-        super().__init__(api_key, base_url, model or DEFAULT_MODEL, **kwargs)
+        super().__init__(api_key, base_url, model or settings.DEFAULT_GEMINI_MODEL, **kwargs)
         self._client: Any = None
 
     def _get_client(self) -> Any:
@@ -172,7 +172,7 @@ class GeminiClient(BaseLLMClient):
             tool_calls=tool_calls,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
-            model=self.model or DEFAULT_MODEL,
+            model=self.model or settings.DEFAULT_GEMINI_MODEL,
         )
 
     async def generate(

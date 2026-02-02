@@ -4,6 +4,8 @@ import json
 import logging
 from typing import Any
 
+from django.conf import settings
+
 from agents.llm.base import (
     BaseLLMClient,
     LLMMessage,
@@ -14,9 +16,6 @@ from agents.llm.base import (
 )
 
 logger = logging.getLogger(__name__)
-
-DEFAULT_MODEL = "llama3.2"
-DEFAULT_BASE_URL = "http://localhost:11434"
 
 
 class OllamaClient(BaseLLMClient):
@@ -33,7 +32,12 @@ class OllamaClient(BaseLLMClient):
         **kwargs: Any,
     ) -> None:
         """Initialize the Ollama client."""
-        super().__init__(api_key, base_url or DEFAULT_BASE_URL, model or DEFAULT_MODEL, **kwargs)
+        super().__init__(
+            api_key,
+            base_url or settings.DEFAULT_OLLAMA_BASE_URL,
+            model or settings.DEFAULT_OLLAMA_MODEL,
+            **kwargs,
+        )
         self._client: Any = None
 
     def _get_client(self) -> Any:

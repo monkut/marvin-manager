@@ -9,10 +9,10 @@ Implements OpenClaw-inspired memory search with:
 
 import hashlib
 import logging
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Literal
 
 from django.db.models import Q
+from pydantic import BaseModel, Field
 
 from memory.models import (
     ChunkSource,
@@ -28,8 +28,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class MemorySearchConfig:
+class MemorySearchConfig(BaseModel):
     """Configuration for memory search."""
 
     enabled: bool = True
@@ -38,20 +37,24 @@ class MemorySearchConfig:
     chunk_overlap: int = 80
     max_results: int = 6
     min_score: float = 0.35
-    hybrid_weights: dict[str, float] = field(default_factory=lambda: {"vector": 0.7, "text": 0.3})
+    hybrid_weights: dict[str, float] = Field(default_factory=lambda: {"vector": 0.7, "text": 0.3})
     embedding_model: str = "all-MiniLM-L6-v2"
+    # HNSW ef_search: higher = better recall, slightly slower (default=40)
+    # Recommended: 100-200 for production RAG systems
+    ef_search: int = 100
+
+    model_config = {"frozen": False}
 
 
-@dataclass
-class MemorySearchResult:
+class MemorySearchResult(BaseModel):
     """A single search result."""
 
     content: str
     score: float
-    source: str  # "message" | "summary"
+    source: Literal["message", "summary"]
     message_id: int | None = None
     summary_id: int | None = None
-    metadata: dict = field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class MemorySearchService:
@@ -290,6 +293,7 @@ class MemorySearchService:
         Returns:
             List of search results sorted by similarity.
         """
+        from django.db import connection  # noqa: PLC0415
         from pgvector.django import CosineDistance  # noqa: PLC0415
 
         query_embedding = self.get_embedding(query)
@@ -297,6 +301,11 @@ class MemorySearchService:
             return []
 
         results: list[MemorySearchResult] = []
+
+        # Set HNSW ef_search for better recall at query time
+        # Higher values improve recall with sublinear speed decrease
+        with connection.cursor() as cursor:
+            cursor.execute(f"SET hnsw.ef_search = {self.config.ef_search}")
 
         # Query EmbeddingChunk with pgvector cosine distance
         chunk_qs = EmbeddingChunk.objects.all()

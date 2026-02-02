@@ -303,3 +303,10 @@ LLM_PROVIDER_DEFAULTS = {
 # Global rate limit settings
 RATE_LIMIT_ENABLED = bool(strtobool(os.getenv("RATE_LIMIT_ENABLED", "True")))
 RATE_LIMIT_DEFAULT_RPM = int(os.getenv("RATE_LIMIT_DEFAULT_RPM", "60"))
+
+# Default LLM models (configurable via environment variables)
+DEFAULT_ANTHROPIC_MODEL = os.getenv("DEFAULT_ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
+DEFAULT_GEMINI_MODEL = os.getenv("DEFAULT_GEMINI_MODEL", "gemini-2.0-flash")
+DEFAULT_OPENAI_MODEL = os.getenv("DEFAULT_OPENAI_MODEL", "gpt-4o")
+DEFAULT_OLLAMA_MODEL = os.getenv("DEFAULT_OLLAMA_MODEL", "llama3.2")
+DEFAULT_OLLAMA_BASE_URL = os.getenv("DEFAULT_OLLAMA_BASE_URL", "http://localhost:11434")
