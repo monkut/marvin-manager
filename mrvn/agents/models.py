@@ -15,6 +15,15 @@ class LLMProvider(StrEnum):
     VLLM = "vllm"
 
 
+class ToolProfile(StrEnum):
+    """Pre-defined tool access profiles."""
+
+    MINIMAL = "minimal"  # No tools by default
+    CODING = "coding"  # Development tools (read, write, exec)
+    MESSAGING = "messaging"  # Communication tools
+    FULL = "full"  # All available tools
+
+
 class Agent(TimestampedModel):
     """An AI agent configuration."""
 
@@ -57,14 +66,94 @@ class Agent(TimestampedModel):
         help_text="Maximum requests per minute (0 = unlimited)",
     )
 
+    # Tool access control (inspired by OpenClaw)
+    tool_profile = models.CharField(
+        max_length=20,
+        choices=[(p.value, p.name.title()) for p in ToolProfile],
+        default=ToolProfile.FULL.value,
+        help_text="Pre-defined tool access profile",
+    )
+    tools_allow = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of tool names to explicitly allow (overrides profile)",
+    )
+    tools_deny = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of tool names to explicitly deny (overrides allow)",
+    )
+
+    # Memory search configuration
+    memory_search_enabled = models.BooleanField(
+        default=True,
+        help_text="Enable memory search tool for this agent",
+    )
+    memory_search_config = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Memory search config: max_results, min_score, hybrid_weights, etc.",
+    )
+
     # Additional config (stop sequences, etc.)
     config = models.JSONField(default=dict, blank=True)
 
     class Meta:
         unique_together = [("owner", "name")]
+        ordering = ["-created_datetime"]
 
     def __str__(self) -> str:
         return f"{self.name} ({self.model_name})"
+
+    def get_allowed_tools(self, available_tools: list[str]) -> list[str]:
+        """Calculate which tools this agent can use.
+
+        Tool resolution order (most restrictive wins):
+        1. Start with profile-based tools
+        2. Add explicitly allowed tools
+        3. Remove explicitly denied tools
+
+        Args:
+            available_tools: List of all available tool names.
+
+        Returns:
+            List of tool names the agent is allowed to use.
+        """
+        profile_tools = self._get_profile_tools(available_tools)
+
+        # Add explicitly allowed tools
+        allowed = set(profile_tools)
+        if self.tools_allow:
+            allowed.update(self.tools_allow)
+
+        # Remove explicitly denied tools (deny wins over allow)
+        if self.tools_deny:
+            allowed -= set(self.tools_deny)
+
+        # Only return tools that actually exist
+        return [t for t in available_tools if t in allowed]
+
+    def _get_profile_tools(self, available_tools: list[str]) -> list[str]:
+        """Get tools based on the tool profile.
+
+        Args:
+            available_tools: List of all available tool names.
+
+        Returns:
+            List of tool names for the profile.
+        """
+        if self.tool_profile == ToolProfile.MINIMAL.value:
+            return []
+        if self.tool_profile == ToolProfile.CODING.value:
+            # Return coding-related tools
+            coding_prefixes = ("read", "write", "edit", "exec", "file", "code")
+            return [t for t in available_tools if any(t.startswith(p) for p in coding_prefixes)]
+        if self.tool_profile == ToolProfile.MESSAGING.value:
+            # Return messaging-related tools
+            messaging_prefixes = ("send", "message", "notify", "email", "slack", "telegram")
+            return [t for t in available_tools if any(t.startswith(p) for p in messaging_prefixes)]
+        # FULL profile - return all tools
+        return available_tools
 
 
 class AgentCredential(TimestampedModel):

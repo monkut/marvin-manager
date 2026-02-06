@@ -49,6 +49,21 @@ class AgentAdmin(admin.ModelAdmin):
             },
         ),
         (
+            "Tool Access Control",
+            {
+                "fields": ("tool_profile", "tools_allow", "tools_deny"),
+                "description": "Control which tools this agent can use.",
+            },
+        ),
+        (
+            "Memory Search",
+            {
+                "fields": ("memory_search_enabled", "memory_search_config"),
+                "description": "Configure agent memory search capability.",
+                "classes": ("collapse",),
+            },
+        ),
+        (
             "Rate Limiting",
             {
                 "fields": ("rate_limit_enabled", "rate_limit_rpm"),

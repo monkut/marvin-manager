@@ -52,7 +52,7 @@ else
         cp -r "$(dirname "$0")/.." "$INSTALL_DIR/"
         chown -R "$MARVIN_USER:$MARVIN_USER" "$INSTALL_DIR"
     else
-        sudo -u "$MARVIN_USER" git clone https://github.com/kiconiaworks/marvin-manager.git .
+        sudo -u "$MARVIN_USER" git clone https://github.com/monkut/marvin-manager.git .
     fi
 fi
 
